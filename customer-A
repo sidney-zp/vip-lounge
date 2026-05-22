@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同行人员扫码</title>
+    <style>
+        body{margin:0;padding:0;background:#f0f2f5;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:sans-serif}
+        .card{width:80%;max-width:400px;background:#fff;border-radius:16px;padding:30px 20px;box-shadow:0 8px 24px rgba(0,0,0,0.08);text-align:center}
+        .title{font-size:18px;color:#333;margin-bottom:10px}
+        .title span{color:#f4333c}
+        .tips{font-size:14px;color:#666;margin-bottom:30px}
+        .scan-btn{width:100%;height:48px;background:linear-gradient(to right,#f4333c,#e02020);color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer}
+        .scan-btn:hover{opacity:0.9}
+        #scan-container{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none}
+        #video{width:100%;height:100%;object-fit:cover}
+        #close-scan{position:absolute;top:20px;right:20px;color:#fff;font-size:24px;cursor:pointer}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="title">👥 请选择 <span>0</span> 位同行人员</div>
+        <div class="tips">📷 点击下方按钮开启扫码</div>
+        <button class="scan-btn" id="open-scan">打开扫码</button>
+    </div>
+    <div id="scan-container">
+        <span id="close-scan">✕</span>
+        <video id="video" autoplay playsinline></video>
+    </div>
+    <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({transports:["websocket","polling"]});
+        const openScanBtn = document.getElementById('open-scan');
+        const scanContainer = document.getElementById('scan-container');
+        const closeScanBtn = document.getElementById('close-scan');
+        const video = document.getElementById('video');
+        const codeReader = new ZXing.BrowserBarcodeReader();
+
+        openScanBtn.addEventListener('click',async()=>{
+            try{
+                const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+                video.srcObject = stream;
+                scanContainer.style.display = 'block';
+                codeReader.decodeFromVideoDevice(null,'video',(res,err)=>{
+                    if(res){
+                        codeReader.reset();
+                        stream.getTracks().forEach(t=>t.stop());
+                        scanContainer.style.display = 'none';
+                        upload(res.text);
+                    }
+                })
+            }catch{alert('请允许相机权限')}
+        });
+        closeScanBtn.addEventListener('click',()=>{
+            codeReader.reset();
+            let s = video.srcObject;
+            if(s) s.getTracks().forEach(t=>t.stop());
+            scanContainer.style.display = 'none';
+        });
+        function upload(text){
+            fetch('/upload-scan',{
+                method:'POST',
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({result:text})
+            }).then(r=>r.json()).then(d=>{
+                d.success?alert('上传成功'):alert('上传失败');
+            })
+        }
+    </script>
+</body>
+</html>
