@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>后台管理-贵宾室系统</title>
+    <style>
+        body{font-family:sans-serif;max-width:900px;margin:20px auto;padding:0 20px}
+        h1{color:#222;margin-bottom:20px}
+        .card{border:1px solid #eee;border-radius:8px;padding:20px;margin-bottom:20px}
+        .qr-preview{width:200px;height:200px;border:1px solid #ccc;margin:10px 0}
+        input{padding:8px;width:300px;margin:6px 0}
+        button{padding:8px 16px;margin:6px 0;cursor:pointer}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    </style>
+</head>
+<body>
+    <h1>后台管理：贵宾室权益系统</h1>
+    <div class="card">
+        <h2>实时二维码</h2>
+        <img class="qr-preview" id="qrImg" alt="二维码">
+        <p>编号：<span id="qrRef">-</span></p>
+    </div>
+    <div class="card">
+        <h2>修改会员姓名</h2>
+        <div>
+            <label>中文姓名：</label>
+            <input id="userName" placeholder="输入中文姓名"><br>
+            <label>英文姓名：</label>
+            <input id="userNameEn" placeholder="输入英文姓名"><br>
+            <button id="saveName">保存修改</button>
+            <button id="refreshQr">刷新二维码编号</button>
+        </div>
+    </div>
+    <div class="card">
+        <h2>扫码记录</h2>
+        <table>
+            <thead>
+                <tr><th>时间</th><th>扫码内容</th></tr>
+            </thead>
+            <tbody id="logBody"></tbody>
+        </table>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io({transports:["websocket","polling"]});
+        const qrImg = document.getElementById("qrImg");
+        const qrRef = document.getElementById("qrRef");
+        const userName = document.getElementById("userName");
+        const userNameEn = document.getElementById("userNameEn");
+        const saveBtn = document.getElementById("saveName");
+        const refreshBtn = document.getElementById("refreshQr");
+        const logBody = document.getElementById("logBody");
+
+        socket.on('config-update',cfg=>{
+            qrImg.src = cfg.qrCodeBase64||"";
+            qrRef.innerText = cfg.qrRef;
+            userName.value = cfg.userName;
+            userNameEn.value = cfg.userNameEn;
+        })
+        socket.on('scan-logs',list=>{
+            logBody.innerHTML="";
+            list.forEach(item=>{
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td>${item.time}</td><td>${item.result}</td>`;
+                logBody.appendChild(tr);
+            })
+        })
+        saveBtn.onclick=async()=>{
+            await fetch('/admin/update-name',{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({userName:userName.value,userNameEn:userNameEn.value})
+            })
+            alert('姓名修改成功');
+        }
+        refreshBtn.onclick=async()=>{
+            await fetch('/admin/refresh-qr',{method:"POST"});
+            alert('编号刷新完成');
+        }
+    </script>
+</body>
+</html>
