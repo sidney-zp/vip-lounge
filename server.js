@@ -6,7 +6,7 @@ const { Server } = require('socket.io');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('./'));
+app.use(express.static(__dirname + '/'));
 
 // 按房间独立存储数据
 let roomConfigs = {};
