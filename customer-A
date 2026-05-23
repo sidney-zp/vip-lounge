@@ -30,7 +30,13 @@
     <script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({transports:["websocket","polling"]});
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'default';
+
+        const socket = io({
+            transports:["websocket","polling"],
+            query:{room:roomId}
+        });
         const openScanBtn = document.getElementById('open-scan');
         const scanContainer = document.getElementById('scan-container');
         const closeScanBtn = document.getElementById('close-scan');
@@ -62,7 +68,7 @@
             fetch('/upload-scan',{
                 method:'POST',
                 headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({result:text})
+                body:JSON.stringify({result:text,roomId:roomId})
             }).then(r=>r.json()).then(d=>{
                 d.success?alert('上传成功'):alert('上传失败');
             })
