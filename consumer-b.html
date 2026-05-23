@@ -60,19 +60,19 @@
         </div>
         <div class="info-line">
             <div class="info-label">姓名</div>
-            <div class="info-item" id="user-name">赵超越</div>
+            <div class="info-item" id="user-name">贵宾用户</div>
         </div>
         <div class="info-line">
             <div class="info-label">二维码编号</div>
-            <div class="info-item" id="qr-num">2888028969364814</div>
+            <div class="info-item" id="qr-num"></div>
         </div>
         <div class="info-line">
             <div class="info-label">生效日期</div>
-            <div class="info-item" id="date-zh">2026-05-22</div>
+            <div class="info-item" id="date-zh"></div>
         </div>
         <div class="info-line" style="display:none" id="date-en-box">
             <div class="info-label">Valid Date</div>
-            <div class="info-item" id="date-en">22/05/2026</div>
+            <div class="info-item" id="date-en"></div>
         </div>
         <div class="rule-box">
             <div class="rule-title">使用条款</div>
@@ -85,7 +85,13 @@
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({transports:["websocket","polling"]});
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'default';
+
+        const socket = io({
+            transports:["websocket","polling"],
+            query:{room:roomId}
+        });
         const MAX_TIME = 30;
         let countdown = MAX_TIME;
         const langZh = document.getElementById('lang-zh');
