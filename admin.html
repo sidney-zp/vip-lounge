@@ -2,38 +2,45 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>后台管理-贵宾室系统</title>
     <style>
         body{font-family:sans-serif;max-width:900px;margin:20px auto;padding:0 20px}
-        h1{color:#222;margin-bottom:20px}
-        .card{border:1px solid #eee;border-radius:8px;padding:20px;margin-bottom:20px}
+        h1{color:#222;margin-bottom:20px;font-size:22px}
+        .card{border:1px solid #eee;border-radius:8px;padding:15px;margin-bottom:15px}
         .qr-preview{width:200px;height:200px;border:1px solid #ccc;margin:10px 0}
-        input{padding:8px;width:300px;margin:6px 0}
-        button{padding:8px 16px;margin:6px 0;cursor:pointer}
-        table{width:100%;border-collapse:collapse;margin-top:10px}
+        input{padding:10px;width:100%;max-width:320px;margin:6px 0;font-size:16px}
+        button{padding:10px 16px;margin:6px 0;cursor:pointer;font-size:16px}
+        table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
         th,td{border:1px solid #ddd;padding:8px;text-align:left}
     </style>
 </head>
 <body>
-    <h1>后台管理：贵宾室权益系统</h1>
+    <h1>后台分组管理</h1>
     <div class="card">
-        <h2>实时二维码</h2>
+        <h3>切换分组房间</h3>
+        <input id="roomId" placeholder="输入分组编号 如groupA" value="default">
+        <button id="joinRoom">切换分组</button>
+    </div>
+    <div class="card">
+        <h3>实时二维码</h3>
         <img class="qr-preview" id="qrImg" alt="二维码">
         <p>编号：<span id="qrRef">-</span></p>
     </div>
     <div class="card">
-        <h2>修改会员姓名</h2>
+        <h3>修改客户姓名</h3>
         <div>
-            <label>中文姓名：</label>
-            <input id="userName" placeholder="输入中文姓名"><br>
-            <label>英文姓名：</label>
-            <input id="userNameEn" placeholder="输入英文姓名"><br>
-            <button id="saveName">保存修改</button>
+            <label>中文姓名</label>
+            <input id="userName" placeholder="填写中文姓名">
+            <label>英文姓名</label>
+            <input id="userNameEn" placeholder="填写英文姓名">
+            <br>
+            <button id="saveName">保存姓名</button>
             <button id="refreshQr">刷新二维码编号</button>
         </div>
     </div>
     <div class="card">
-        <h2>扫码记录</h2>
+        <h3>本组扫码记录</h3>
         <table>
             <thead>
                 <tr><th>时间</th><th>扫码内容</th></tr>
@@ -43,7 +50,19 @@
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({transports:["websocket","polling"]});
+        let currentRoomId = 'default';
+        let socket;
+
+        function connectSocket(rid){
+            if(socket) socket.disconnect();
+            socket = io({
+                transports:["websocket","polling"],
+                query:{room:rid}
+            });
+            bindEvent();
+        }
+        connectSocket(currentRoomId);
+
         const qrImg = document.getElementById("qrImg");
         const qrRef = document.getElementById("qrRef");
         const userName = document.getElementById("userName");
@@ -51,31 +70,51 @@
         const saveBtn = document.getElementById("saveName");
         const refreshBtn = document.getElementById("refreshQr");
         const logBody = document.getElementById("logBody");
+        const roomInput = document.getElementById("roomId");
+        const joinBtn = document.getElementById("joinRoom");
 
-        socket.on('config-update',cfg=>{
-            qrImg.src = cfg.qrCodeBase64||"";
-            qrRef.innerText = cfg.qrRef;
-            userName.value = cfg.userName;
-            userNameEn.value = cfg.userNameEn;
-        })
-        socket.on('scan-logs',list=>{
-            logBody.innerHTML="";
-            list.forEach(item=>{
-                let tr = document.createElement('tr');
-                tr.innerHTML = `<td>${item.time}</td><td>${item.result}</td>`;
-                logBody.appendChild(tr);
+        function bindEvent(){
+            socket.on('config-update',cfg=>{
+                qrImg.src = cfg.qrCodeBase64||"";
+                qrRef.innerText = cfg.qrRef;
+                userName.value = cfg.userName;
+                userNameEn.value = cfg.userNameEn;
             })
-        })
+            socket.on('scan-logs',list=>{
+                logBody.innerHTML="";
+                list.forEach(item=>{
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${item.time}</td><td>${item.result}</td>`;
+                    logBody.appendChild(tr);
+                })
+            })
+        }
+
+        joinBtn.onclick=()=>{
+            currentRoomId = roomInput.value.trim()||'default';
+            connectSocket(currentRoomId);
+            alert("已切换至分组："+currentRoomId);
+        }
+
         saveBtn.onclick=async()=>{
             await fetch('/admin/update-name',{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({userName:userName.value,userNameEn:userNameEn.value})
+                body:JSON.stringify({
+                    userName:userName.value,
+                    userNameEn:userNameEn.value,
+                    roomId:currentRoomId
+                })
             })
-            alert('姓名修改成功');
+            alert('姓名保存成功');
         }
+
         refreshBtn.onclick=async()=>{
-            await fetch('/admin/refresh-qr',{method:"POST"});
+            await fetch('/admin/refresh-qr',{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({roomId:currentRoomId})
+            });
             alert('编号刷新完成');
         }
     </script>
