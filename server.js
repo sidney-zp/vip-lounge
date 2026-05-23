@@ -2,11 +2,20 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path'); // 新增 path 模块
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname + '/'));
+
+// 核心修改：用 path.join 强制指定静态文件根目录
+app.use(express.static(path.join(__dirname, '/')));
+
+// 新增一个根路由，直接跳转到扫码页
+app.get('/', (req, res) => {
+  res.redirect('/index.html');
+});
+
 
 // 按房间独立存储数据
 let roomConfigs = {};
